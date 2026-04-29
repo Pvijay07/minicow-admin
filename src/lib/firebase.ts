@@ -15,7 +15,7 @@ const messaging = getMessaging(app);
 export const requestForToken = async (registration?: ServiceWorkerRegistration) => {
   try {
     const currentToken = await getToken(messaging, { 
-      vapidKey: 'BM3u_0lH_7-O1W7uY8P7x0I5r9v9m9R6X4l2S4e9p3v5u8_S0-Jv4K0B',
+      vapidKey: 'BFMU3uynFbuUUFa9KltTDNErK4iKyMvY1CXQkSp2ctlUOWYi5l7VQWYN7xHuwpo0CQrb2ZziYh7CWRX-MsVn6qw',
       serviceWorkerRegistration: registration
     });
     if (currentToken) {
