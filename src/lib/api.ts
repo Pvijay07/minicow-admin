@@ -221,11 +221,12 @@ export const servicesApi = {
     name: string;
     description?: string;
     icon?: string;
+    pricing?: string;
   }) => {
     const formData = new FormData();
-    Object.entries(data).forEach(([key, value]) =>
-      formData.append(key, String(value)),
-    );
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined) formData.append(key, String(value));
+    });
     return request(
       "/adminAddService",
       { method: "POST", body: formData },
@@ -238,11 +239,12 @@ export const servicesApi = {
     description?: string;
     icon?: string;
     is_active?: number;
+    pricing?: string;
   }) => {
     const formData = new FormData();
-    Object.entries(data).forEach(([key, value]) =>
-      formData.append(key, String(value)),
-    );
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined) formData.append(key, String(value));
+    });
     return request(
       "/adminUpdateService",
       { method: "POST", body: formData },

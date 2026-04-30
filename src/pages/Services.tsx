@@ -15,12 +15,23 @@ import {
 import { servicesApi } from '@/src/lib/api';
 import { cn } from '@/src/lib/utils';
 
+interface Pricing {
+  id?: string | number;
+  service_id?: string | number;
+  grade?: string | null;
+  min_price?: string | number | null;
+  max_price?: string | number | null;
+  duration_hours?: string | number | null;
+  fixed_price?: string | number | null;
+}
+
 interface Service {
-  id: number;
+  id: string | number;
   name: string;
   description: string;
   icon: string;
-  is_active: number;
+  is_active: string | number;
+  pricing?: Pricing[];
 }
 
 const ICON_OPTIONS = [
@@ -36,6 +47,7 @@ export default function Services() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
+  const [pricingRows, setPricingRows] = useState<Pricing[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -54,6 +66,20 @@ export default function Services() {
     }
   };
 
+  const handleAddPricingRow = () => {
+    setPricingRows([...pricingRows, { grade: '', min_price: '', max_price: '', duration_hours: '', fixed_price: '' }]);
+  };
+
+  const handleRemovePricingRow = (index: number) => {
+    setPricingRows(pricingRows.filter((_, i) => i !== index));
+  };
+
+  const updatePricingRow = (index: number, field: keyof Pricing, value: string) => {
+    const updated = [...pricingRows];
+    updated[index] = { ...updated[index], [field]: value };
+    setPricingRows(updated);
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -61,6 +87,7 @@ export default function Services() {
       name: formData.get('name') as string,
       description: formData.get('description') as string,
       icon: formData.get('icon') as string,
+      pricing: JSON.stringify(pricingRows),
     };
 
     setIsSubmitting(true);
@@ -73,6 +100,7 @@ export default function Services() {
       await fetchServices();
       setShowModal(false);
       setEditingService(null);
+      setPricingRows([]);
     } catch (err) {
       console.error('Operation failed', err);
     } finally {
@@ -80,7 +108,14 @@ export default function Services() {
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const formatPrice = (price: string | number | null | undefined) => {
+    if (!price) return '';
+    const num = typeof price === 'string' ? parseFloat(price) : price;
+    if (isNaN(num)) return price;
+    return num.toLocaleString('en-IN');
+  };
+
+  const handleDelete = async (id: string | number) => {
     if (!confirm('Are you sure? This may affect existing requests.')) return;
     try {
       await servicesApi.adminDeleteService(id);
@@ -105,6 +140,7 @@ export default function Services() {
         <button 
           onClick={() => {
             setEditingService(null);
+            setPricingRows([]);
             setShowModal(true);
           }}
           className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 active:scale-95 transition-all"
@@ -131,6 +167,7 @@ export default function Services() {
                   <button 
                     onClick={() => {
                       setEditingService(service);
+                      setPricingRows(service.pricing || []);
                       setShowModal(true);
                     }}
                     className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
@@ -149,6 +186,25 @@ export default function Services() {
               <p className="text-sm text-slate-500 mt-2 leading-relaxed">
                 {service.description || 'No description provided.'}
               </p>
+              
+              {service.pricing && service.pricing.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-slate-50 space-y-2">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pricing Config</p>
+                  <div className="flex flex-wrap gap-2">
+                    {service.pricing.map((p, i) => (
+                      <div key={i} className="px-2 py-1 bg-slate-50 border border-slate-100 rounded text-[10px] font-medium text-slate-600">
+                        {p.grade && <span className="font-bold text-indigo-600 mr-1">{p.grade}:</span>}
+                        {p.fixed_price && p.fixed_price !== "0.00" ? (
+                          `₹${formatPrice(p.fixed_price)}`
+                        ) : (
+                          p.min_price ? `₹${formatPrice(p.min_price)} - ₹${formatPrice(p.max_price)}` : ''
+                        )}
+                        {p.duration_hours && ` / ${p.duration_hours}hr`}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -170,7 +226,7 @@ export default function Services() {
               </button>
             </div>
             
-            <form className="p-6 space-y-6" onSubmit={handleSubmit}>
+            <form className="p-6 space-y-6 max-h-[80vh] overflow-y-auto" onSubmit={handleSubmit}>
               <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Service Name</label>
@@ -210,12 +266,105 @@ export default function Services() {
                     name="description"
                     defaultValue={editingService?.description}
                     placeholder="Brief description of the service..."
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all min-h-[100px] text-sm font-medium"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all min-h-[80px] text-sm font-medium"
                   />
+                </div>
+
+                <div className="space-y-4 pt-4 border-t border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Pricing Configuration</label>
+                      <p className="text-[9px] text-slate-400 ml-1">Configure grades for Adoption or hours for Pooja/Cuddling.</p>
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={handleAddPricingRow}
+                      className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                    >
+                      <Plus className="w-3 h-3" />
+                      Add Row
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {pricingRows.map((row, index) => (
+                      <div key={index} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-3 relative group/row">
+                        <button 
+                          type="button"
+                          onClick={() => handleRemovePricingRow(index)}
+                          className="absolute top-2 right-2 p-1 text-slate-400 hover:text-rose-500 opacity-0 group-hover/row:opacity-100 transition-opacity"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-slate-400 uppercase">Grade</label>
+                            <input 
+                              type="text" 
+                              placeholder="e.g. A"
+                              value={row.grade || ''}
+                              onChange={(e) => updatePricingRow(index, 'grade', e.target.value)}
+                              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-slate-400 uppercase">Hours</label>
+                            <input 
+                              type="number" 
+                              placeholder="e.g. 2"
+                              value={row.duration_hours || ''}
+                              onChange={(e) => updatePricingRow(index, 'duration_hours', e.target.value)}
+                              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-slate-400 uppercase">Min Price</label>
+                            <input 
+                              type="number" 
+                              placeholder="75000"
+                              value={row.min_price || ''}
+                              onChange={(e) => updatePricingRow(index, 'min_price', e.target.value)}
+                              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-slate-400 uppercase">Max Price</label>
+                            <input 
+                              type="number" 
+                              placeholder="120000"
+                              value={row.max_price || ''}
+                              onChange={(e) => updatePricingRow(index, 'max_price', e.target.value)}
+                              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-slate-400 uppercase">Fixed Price</label>
+                            <input 
+                              type="number" 
+                              placeholder="5000"
+                              value={row.fixed_price || ''}
+                              onChange={(e) => updatePricingRow(index, 'fixed_price', e.target.value)}
+                              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                    {pricingRows.length === 0 && (
+                      <div className="text-center py-6 border-2 border-dashed border-slate-100 rounded-2xl">
+                        <p className="text-xs text-slate-400 font-medium">No pricing configured</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex gap-3 pt-4 sticky bottom-0 bg-white">
                 <button 
                   type="button"
                   onClick={() => setShowModal(false)}
