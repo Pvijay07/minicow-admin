@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Search, Filter, Edit2, Trash2, Eye, MessageSquare, Heart, Clock, Plus, Loader2, Pin, PinOff, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { adminApi } from '@/src/lib/api';
+import CommentModal from '@/src/components/CommentModal';
 
 type PostStatus = 'admin' | 'user' | 'scheduled' | 'blocked';
 
@@ -11,6 +12,7 @@ export default function Posts() {
   const [searchTerm, setSearchTerm] = useState('');
   const [status, setStatus] = useState<PostStatus>('admin');
   const [error, setError] = useState<string | null>(null);
+  const [selectedPost, setSelectedPost] = useState<any>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -169,7 +171,10 @@ export default function Posts() {
                         <Heart className="w-4 h-4" />
                         {post.likes_count}
                       </div>
-                      <div className="flex items-center gap-1.5 text-xs">
+                      <div 
+                        className="flex items-center gap-1.5 text-xs cursor-pointer hover:text-indigo-600 transition-colors"
+                        onClick={() => setSelectedPost(post)}
+                      >
                         <MessageSquare className="w-4 h-4" />
                         {post.comments_count}
                       </div>
@@ -177,7 +182,14 @@ export default function Posts() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity text-slate-400">
+                  <button 
+                    onClick={() => setSelectedPost(post)}
+                    className="p-2 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                    title="View & Add Comments"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                  </button>
                   <button 
                     onClick={() => handleTogglePin(post.id)}
                     className={`p-2 rounded-lg transition-all ${
@@ -218,6 +230,14 @@ export default function Posts() {
           ))}
         </div>
       </div>
+
+      {selectedPost && (
+        <CommentModal 
+          postId={selectedPost.id}
+          postText={selectedPost.post_text}
+          onClose={() => setSelectedPost(null)}
+        />
+      )}
     </div>
   );
 }

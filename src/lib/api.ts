@@ -183,6 +183,18 @@ export const adminApi = {
     }),
 
   // Comments / Replies
+  getComments: (postId: string | number) =>
+    request(`/adminGetComments?post_id=${postId}`),
+  addComment: (data: {
+    post_id: string | number;
+    comment: string;
+    admin_id?: number;
+  }) =>
+    request("/adminAddComment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }),
   addReply: (data: {
     parent_comment_id: string | number;
     comment: string;
